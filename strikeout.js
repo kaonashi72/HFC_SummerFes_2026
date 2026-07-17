@@ -1,5 +1,8 @@
 (function(){
   const board = document.getElementById('board');
+  const boardWrap = document.getElementById('board-wrap');
+  const mainEl = document.getElementById('main');
+  const sideEl = document.getElementById('side');
   const timerEl = document.getElementById('timer');
   const remainingEl = document.getElementById('remaining');
   const startBtn = document.getElementById('start-btn');
@@ -39,6 +42,46 @@
   const NICK_KEY = 'strikeout_last_nick';
   let hasSavedThisClear = false;
   let savingScore = false;
+
+  function setCssVar(name, value){
+    try{
+      document.documentElement.style.setProperty(name, value);
+    }catch(e){}
+  }
+
+  function fitBoardToViewport(){
+    if(!mainEl || !boardWrap) return;
+    const mainRect = mainEl.getBoundingClientRect();
+    if(!mainRect.width || !mainRect.height) return;
+
+    const cs = getComputedStyle(mainEl);
+    const cols = String(cs.gridTemplateColumns || '').trim().split(/\s+/).filter(Boolean).length;
+    const isTwoCol = cols >= 2;
+
+    const mainGap = parseFloat(cs.columnGap || cs.gap || '16') || 16;
+    const sideRect = (isTwoCol && sideEl) ? sideEl.getBoundingClientRect() : { width:0 };
+
+    const wrapCs = getComputedStyle(boardWrap);
+    const padX = (parseFloat(wrapCs.paddingLeft || '0') || 0) + (parseFloat(wrapCs.paddingRight || '0') || 0);
+    const padY = (parseFloat(wrapCs.paddingTop || '0') || 0) + (parseFloat(wrapCs.paddingBottom || '0') || 0);
+
+    const availableW = Math.max(0, mainRect.width - (isTwoCol ? sideRect.width : 0) - (isTwoCol ? mainGap : 0));
+    const availableH = Math.max(0, mainRect.height);
+
+    // We budget some space for gap between cells too (2 gaps for 3 cells).
+    // Start from a safe guess, then compute gap from cell size.
+    let cell = Math.floor(Math.min((availableW - padX) / 3, (availableH - padY) / 3));
+    cell = Math.max(90, Math.min(240, cell));
+    let cellGap = Math.round(Math.max(12, Math.min(28, cell * 0.12)));
+
+    // Recalculate with gap budget to avoid tiny overflows.
+    cell = Math.floor(Math.min((availableW - padX - cellGap*2) / 3, (availableH - padY - cellGap*2) / 3));
+    cell = Math.max(90, Math.min(240, cell));
+    cellGap = Math.round(Math.max(12, Math.min(28, cell * 0.12)));
+
+    setCssVar('--cell', cell + 'px');
+    setCssVar('--cell-gap', cellGap + 'px');
+  }
 
   function setSaveButtonState(state){
     if(!saveScoreBtn) return;
@@ -560,9 +603,19 @@
   }catch(e){}
 
   buildBoard();
+  fitBoardToViewport();
   updateRemaining();
   updatePauseUi();
   renderLeaderboard();
+
+  let __fitTimer = null;
+  function scheduleFit(){
+    if(__fitTimer) clearTimeout(__fitTimer);
+    __fitTimer = setTimeout(fitBoardToViewport, 60);
+  }
+  window.addEventListener('resize', scheduleFit, { passive:true });
+  window.addEventListener('orientationchange', scheduleFit, { passive:true });
+  document.addEventListener('fullscreenchange', scheduleFit);
 
   function submitScore(){
     if(remainingCount() !== 0) return;
