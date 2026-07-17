@@ -2,7 +2,12 @@
   const board = document.getElementById('board');
   const boardWrap = document.getElementById('board-wrap');
   const mainEl = document.getElementById('main');
+  const leftEl = document.getElementById('left');
+  const leftInnerEl = document.getElementById('left-inner');
   const sideEl = document.getElementById('side');
+  const layoutBtn = document.getElementById('layout-btn');
+  const controlsEl = document.querySelector('#topbar .controls');
+  const remainingWrapEl = document.querySelector('#hud .hud-remaining');
   const timerEl = document.getElementById('timer');
   const remainingEl = document.getElementById('remaining');
   const startBtn = document.getElementById('start-btn');
@@ -40,6 +45,7 @@
   const BEST_KEY = 'strikeout_best_time';
   const LB_KEY = 'strikeout_leaderboard';
   const NICK_KEY = 'strikeout_last_nick';
+  const LAYOUT_KEY = 'strikeout_layout_alt';
   let hasSavedThisClear = false;
   let savingScore = false;
 
@@ -56,16 +62,19 @@
 
     const cs = getComputedStyle(mainEl);
     const cols = String(cs.gridTemplateColumns || '').trim().split(/\s+/).filter(Boolean).length;
-    const isTwoCol = cols >= 2;
-
-    const mainGap = parseFloat(cs.columnGap || cs.gap || '16') || 16;
-    const sideRect = (isTwoCol && sideEl) ? sideEl.getBoundingClientRect() : { width:0 };
+    const colGap = parseFloat(cs.columnGap || cs.gap || '16') || 16;
+    const sideRect = sideEl ? sideEl.getBoundingClientRect() : { width:0 };
+    const leftRect = leftEl ? leftEl.getBoundingClientRect() : { width:0 };
+    const gapsToSubtract = Math.max(0, cols - 1) * colGap;
 
     const wrapCs = getComputedStyle(boardWrap);
     const padX = (parseFloat(wrapCs.paddingLeft || '0') || 0) + (parseFloat(wrapCs.paddingRight || '0') || 0);
     const padY = (parseFloat(wrapCs.paddingTop || '0') || 0) + (parseFloat(wrapCs.paddingBottom || '0') || 0);
 
-    const availableW = Math.max(0, mainRect.width - (isTwoCol ? sideRect.width : 0) - (isTwoCol ? mainGap : 0));
+    const subtractW =
+      (cols >= 2 ? (sideRect.width || 0) : 0) +
+      (cols >= 3 ? (leftRect.width || 0) : 0);
+    const availableW = Math.max(0, mainRect.width - subtractW - gapsToSubtract);
     const availableH = Math.max(0, mainRect.height);
 
     // We budget some space for gap between cells too (2 gaps for 3 cells).
@@ -81,6 +90,42 @@
 
     setCssVar('--cell', cell + 'px');
     setCssVar('--cell-gap', cellGap + 'px');
+  }
+
+  const originalPlacement = {
+    controlsParent: controlsEl ? controlsEl.parentElement : null,
+    controlsNext: controlsEl ? controlsEl.nextElementSibling : null,
+    remainingParent: remainingWrapEl ? remainingWrapEl.parentElement : null,
+    remainingNext: remainingWrapEl ? remainingWrapEl.nextElementSibling : null,
+  };
+
+  function restoreNode(node, parent, next){
+    if(!node || !parent) return;
+    try{
+      if(next && next.parentNode === parent) parent.insertBefore(node, next);
+      else parent.appendChild(node);
+    }catch(e){}
+  }
+
+  function setAltLayout(on){
+    document.body.classList.toggle('layout-alt', !!on);
+    if(on){
+      if(leftInnerEl && remainingWrapEl) leftInnerEl.appendChild(remainingWrapEl);
+      if(leftInnerEl && controlsEl){
+        controlsEl.classList.add('in-leftbar');
+        leftInnerEl.appendChild(controlsEl);
+      }
+    }else{
+      if(controlsEl) controlsEl.classList.remove('in-leftbar');
+      restoreNode(remainingWrapEl, originalPlacement.remainingParent, originalPlacement.remainingNext);
+      restoreNode(controlsEl, originalPlacement.controlsParent, originalPlacement.controlsNext);
+    }
+    try{ localStorage.setItem(LAYOUT_KEY, on ? '1' : '0'); }catch(e){}
+    if(layoutBtn){
+      const label = on ? '通常レイアウト' : '簡易レイアウト';
+      layoutBtn.innerHTML = `<span class="btn-row"><span>${label}</span></span>`;
+    }
+    fitBoardToViewport();
   }
 
   function setSaveButtonState(state){
@@ -534,6 +579,11 @@
   if(resetBtn) resetBtn.addEventListener('click', ()=> resetGame(true));
   if(clearRestartBtn) clearRestartBtn.addEventListener('click', ()=>{
     ensureAudioRunning();
+    if(savingScore) return;
+    if(remainingCount() === 0 && !hasSavedThisClear){
+      const ok = window.confirm('記録をまだ保存してないよ〜。\n保存せずにもう一度遊ぶ？');
+      if(!ok) return;
+    }
     resetGame(false);
     // back to home state (timer should NOT auto-start)
   });
@@ -601,6 +651,19 @@
       window.addEventListener('keydown', auto, { once:true, capture:true });
     }
   }catch(e){}
+
+  if(layoutBtn){
+    layoutBtn.addEventListener('click', ()=>{
+      setAltLayout(!document.body.classList.contains('layout-alt'));
+    });
+  }
+  try{
+    const alt = localStorage.getItem(LAYOUT_KEY) === '1';
+    if(alt) setAltLayout(true);
+    else setAltLayout(false);
+  }catch(e){
+    setAltLayout(false);
+  }
 
   buildBoard();
   fitBoardToViewport();
