@@ -32,6 +32,7 @@
   const bgmVolVal = document.getElementById('bgm-vol-val');
   const timeLimitEl = document.getElementById('time-limit');
   const leaderboardEl = document.getElementById('leaderboard');
+  const lbScrollEl = document.getElementById('lb-scroll');
   const nicknameEl = document.getElementById('nickname');
   const saveScoreBtn = document.getElementById('save-score');
   const saveIndicatorEl = document.getElementById('save-indicator');
@@ -406,6 +407,12 @@
     const list = loadLeaderboard();
     if(list.length === 0){
       leaderboardEl.innerHTML = `<div class="lb-empty">まだ記録なしだよ〜</div>`;
+      if(lbScrollEl){
+        lbScrollEl.disabled = true;
+        lbScrollEl.max = '0';
+        lbScrollEl.value = '0';
+        lbScrollEl.style.visibility = 'hidden';
+      }
       return;
     }
     const escapeHtml = (s)=> String(s)
@@ -455,6 +462,19 @@
           </div>
         </div>`;
     }).join('');
+
+    // sync slider after DOM updates
+    requestAnimationFrame(syncLbSlider);
+  }
+
+  function syncLbSlider(){
+    if(!leaderboardEl || !lbScrollEl) return;
+    const max = Math.max(0, Math.round(leaderboardEl.scrollHeight - leaderboardEl.clientHeight));
+    lbScrollEl.max = String(max);
+    lbScrollEl.value = String(Math.min(max, Math.round(leaderboardEl.scrollTop)));
+    const needs = max > 0;
+    lbScrollEl.disabled = !needs;
+    lbScrollEl.style.visibility = needs ? 'visible' : 'hidden';
   }
   let lastTimerPaint = 0;
   function currentElapsed(){
@@ -766,15 +786,33 @@
   updateRemaining();
   updatePauseUi();
   renderLeaderboard();
+  syncLbSlider();
 
   let __fitTimer = null;
   function scheduleFit(){
     if(__fitTimer) clearTimeout(__fitTimer);
-    __fitTimer = setTimeout(fitBoardToViewport, 60);
+    __fitTimer = setTimeout(()=>{
+      fitBoardToViewport();
+      syncLbSlider();
+    }, 60);
   }
   window.addEventListener('resize', scheduleFit, { passive:true });
   window.addEventListener('orientationchange', scheduleFit, { passive:true });
   document.addEventListener('fullscreenchange', scheduleFit);
+  if(leaderboardEl){
+    leaderboardEl.addEventListener('scroll', ()=>{
+      if(!lbScrollEl) return;
+      const max = Math.max(0, Math.round(leaderboardEl.scrollHeight - leaderboardEl.clientHeight));
+      lbScrollEl.max = String(max);
+      lbScrollEl.value = String(Math.min(max, Math.round(leaderboardEl.scrollTop)));
+    }, { passive:true });
+  }
+  if(lbScrollEl){
+    lbScrollEl.addEventListener('input', ()=>{
+      if(!leaderboardEl) return;
+      leaderboardEl.scrollTop = Number(lbScrollEl.value || 0);
+    });
+  }
 
   function submitScore(){
     if(!gameOver) return;

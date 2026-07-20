@@ -435,6 +435,34 @@
     overscroll-behavior:contain;
     min-height:0;
   }
+  .lb-wrap{
+    display:grid;
+    grid-template-columns:1fr 16px;
+    gap:10px;
+    min-height:0;
+    flex:1 1 auto;
+  }
+  .lb-wrap .lb{
+    padding-right:0;
+  }
+  .lb-scroll{
+    width:16px;
+    height:100%;
+    align-self:stretch;
+    justify-self:stretch;
+    background:transparent;
+    accent-color: var(--accent2);
+    opacity:0.85;
+  }
+  .lb-scroll[disabled]{
+    opacity:0.25;
+  }
+  /* vertical range */
+  .lb-scroll{
+    writing-mode:bt-lr;
+    -webkit-appearance: slider-vertical;
+    appearance: auto;
+  }
   .lb-row{
     display:flex;
     align-items:center;
@@ -996,7 +1024,10 @@
     <aside id="side" aria-label="スコアボード">
       <div class="panel">
         <div class="panel-title">RANKING</div>
-        <div class="lb" id="leaderboard"></div>
+        <div class="lb-wrap">
+          <div class="lb" id="leaderboard"></div>
+          <input id="lb-scroll" class="lb-scroll" type="range" min="0" max="0" value="0" step="1" aria-label="ランキングスクロール" disabled>
+        </div>
       </div>
     </aside>
   </div>
