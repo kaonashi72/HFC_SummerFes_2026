@@ -16,6 +16,7 @@
     --cell-gap: 18px;
     --side-w: min(320px, 30vw);
     --left-w: min(360px, 30vw);
+    --corner-logo-h: clamp(36px, 7vmin, 78px);
   }
   *{ box-sizing:border-box; }
   html,body{
@@ -828,10 +829,10 @@
     text-align:center;
   }
 
-  #fullscreen-btn{ position:fixed; top:14px; right:14px; z-index:40; opacity:0.6; }
+  #fullscreen-btn{ position:fixed; top:calc(14px + env(safe-area-inset-top) + var(--corner-logo-h) + 10px); right:14px; z-index:40; opacity:0.6; }
   #fullscreen-btn:hover{ opacity:1; }
 
-  #layout-btn{ position:fixed; top:14px; left:14px; z-index:40; opacity:0.6; }
+  #layout-btn{ position:fixed; top:calc(14px + env(safe-area-inset-top) + var(--corner-logo-h) + 10px); left:14px; z-index:40; opacity:0.6; }
   #layout-btn:hover{ opacity:1; }
 
   #left{
@@ -912,7 +913,7 @@
   .corner-logo{
     position:fixed;
     bottom:calc(14px + env(safe-area-inset-bottom));
-    height:clamp(36px, 7vmin, 78px);
+    height:var(--corner-logo-h);
     width:auto;
     object-fit:contain;
     opacity:0.85;
@@ -920,10 +921,21 @@
     pointer-events:none;
     filter:drop-shadow(0 10px 22px rgba(0,0,0,0.45));
   }
+  .corner-logo.top{
+    top:calc(14px + env(safe-area-inset-top));
+    bottom:auto;
+    filter:drop-shadow(0 12px 24px rgba(0,0,0,0.50));
+  }
   #corner-logo-right{
     right:calc(14px + env(safe-area-inset-right));
   }
   #corner-logo-left{
+    left:calc(14px + env(safe-area-inset-left));
+  }
+  #corner-logo-top-right{
+    right:calc(14px + env(safe-area-inset-right));
+  }
+  #corner-logo-top-left{
     left:calc(14px + env(safe-area-inset-left));
   }
 
@@ -976,6 +988,8 @@
 
 <img id="corner-logo-right" class="corner-logo" src="./hfcchurch.jpg" alt="HFCロゴ">
 <img id="corner-logo-left" class="corner-logo" src="./hfcchurch.jpg" alt="HFCロゴ">
+<img id="corner-logo-top-right" class="corner-logo top" src="./hfcchurch.jpg" alt="HFCロゴ">
+<img id="corner-logo-top-left" class="corner-logo top" src="./hfcchurch.jpg" alt="HFCロゴ">
 <button id="layout-btn" title="レイアウト切替"><span class="btn-row"><span>レイアウト切替</span></span></button>
 <button id="fullscreen-btn" title="フルスクリーン切替"><span class="btn-row"><svg class="icon"><use href="#i-fullscreen"></use></svg><span>投影用フルスクリーン</span></span></button>
 
