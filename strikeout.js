@@ -412,7 +412,7 @@
     const pad2 = (n)=> String(n).padStart(2,'0');
     leaderboardEl.innerHTML = list.slice(0, 200).map((r, idx)=>{
       const id = String(r.id || '');
-      const name = String(r.name || 'NO NAME').slice(0, 12);
+      const name = String(r.name || 'NO NAME').slice(0, 6);
       const t = formatTime(Number(r.timeMs || 0));
       const hits = Math.max(0, Math.min(9, Number(r.hits || 0)));
       const limitMs = Number(r.limitMs || 0);
@@ -782,7 +782,7 @@
     setSaveButtonState('saving');
     if(nicknameEl) nicknameEl.disabled = true;
 
-    const name = (nicknameEl && nicknameEl.value ? nicknameEl.value : '').trim().slice(0, 12) || 'NO NAME';
+    const name = (nicknameEl && nicknameEl.value ? nicknameEl.value : '').trim().slice(0, 6) || 'NO NAME';
     const timeMs = Number(elapsedBase || 0);
     const score = calcScore(timeMs);
     const result = (hits >= 9) ? 'clear' : 'timeup';
