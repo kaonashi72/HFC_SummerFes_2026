@@ -408,10 +408,24 @@
       leaderboardEl.innerHTML = `<div class="lb-empty">まだ記録なしだよ〜</div>`;
       return;
     }
+    const escapeHtml = (s)=> String(s)
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;')
+      .replaceAll('"','&quot;')
+      .replaceAll("'",'&#39;');
+
+    const nameHtml = (raw)=>{
+      const chars = Array.from(String(raw || 'NO NAME')).slice(0, 6);
+      const line1 = chars.slice(0, 5).join('');
+      const line2 = chars.slice(5).join('');
+      return line2 ? `${escapeHtml(line1)}<br>${escapeHtml(line2)}` : escapeHtml(line1);
+    };
+
     const pad2 = (n)=> String(n).padStart(2,'0');
     leaderboardEl.innerHTML = list.slice(0, 200).map((r, idx)=>{
       const id = String(r.id || '');
-      const name = String(r.name || 'NO NAME').slice(0, 6);
+      const name = nameHtml(r.name);
       const t = formatTime(Number(r.timeMs || 0));
       const hits = Math.max(0, Math.min(9, Number(r.hits || 0)));
       const limitMs = Number(r.limitMs || 0);
