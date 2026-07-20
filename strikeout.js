@@ -15,8 +15,11 @@
   const undoBtn = document.getElementById('undo-btn');
   const resetBtn = document.getElementById('reset-btn');
   const clearOverlay = document.getElementById('clear-overlay');
+  const clearTitleEl = document.getElementById('clear-title');
   const clearTimeEl = document.getElementById('clear-time');
+  const clearCountEl = document.getElementById('clear-count');
   const bestNoteEl = document.getElementById('best-note');
+  const saveRowEl = document.getElementById('save-row');
   const clearRestartBtn = document.getElementById('clear-restart');
   const fsBtn = document.getElementById('fullscreen-btn');
   const confettiRoot = document.getElementById('confetti');
@@ -28,6 +31,7 @@
   const bgmVolWrap = document.getElementById('bgm-vol-wrap');
   const bgmVol = document.getElementById('bgm-vol');
   const bgmVolVal = document.getElementById('bgm-vol-val');
+  const timeLimitEl = document.getElementById('time-limit');
   const leaderboardEl = document.getElementById('leaderboard');
   const nicknameEl = document.getElementById('nickname');
   const saveScoreBtn = document.getElementById('save-score');
@@ -46,8 +50,11 @@
   const LB_KEY = 'strikeout_leaderboard';
   const NICK_KEY = 'strikeout_last_nick';
   const LAYOUT_KEY = 'strikeout_layout_alt';
+  const LIMIT_KEY = 'strikeout_time_limit_ms';
   let hasSavedThisClear = false;
   let savingScore = false;
+  let gameOver = false;
+  let timeLimitMs = 0;
 
   function setCssVar(name, value){
     try{
@@ -356,6 +363,14 @@
     return s.toFixed(2).padStart(5,'0');
   }
 
+  function limitLabel(ms){
+    if(!ms) return 'なし';
+    if(ms === 60000) return '1m';
+    if(ms === 45000) return '45s';
+    if(ms === 30000) return '30s';
+    return Math.round(ms/1000) + 's';
+  }
+
   function calcScore(ms){
     // kid-friendly: bigger is better, based on clear time
     const s = ms/1000;
@@ -371,6 +386,9 @@
       list.forEach((r)=>{
         if(!r || typeof r !== 'object') return;
         if(!r.id) r.id = String(Date.now()) + '-' + Math.random().toString(16).slice(2);
+        if(typeof r.hits !== 'number') r.hits = 9;
+        if(typeof r.limitMs !== 'number') r.limitMs = 0;
+        if(!r.result) r.result = (r.hits >= 9 ? 'clear' : 'timeup');
       });
       return list;
     }catch(e){
@@ -396,6 +414,10 @@
       const id = String(r.id || '');
       const name = String(r.name || 'NO NAME').slice(0, 12);
       const t = formatTime(Number(r.timeMs || 0));
+      const hits = Math.max(0, Math.min(9, Number(r.hits || 0)));
+      const limitMs = Number(r.limitMs || 0);
+      const rightLine1 = (hits >= 9 && !limitMs) ? `${t}s` : `抜き: ${hits}/9`;
+      const rightLine2 = (hits >= 9 && !limitMs) ? '' : `時間: ${t}s${limitMs ? `（制限 ${limitLabel(limitMs)}）` : ''}`;
       const when = r.at ? new Date(r.at) : null;
       const meta = when
         ? `${pad2(when.getMonth()+1)}/${pad2(when.getDate())} ${pad2(when.getHours())}:${pad2(when.getMinutes())}`
@@ -410,7 +432,8 @@
             </div>
           </div>
           <div class="lb-right">
-            <div class="lb-time">${t}s</div>
+            <div class="lb-time">${rightLine1}</div>
+            ${rightLine2 ? `<div class="lb-meta">${rightLine2}</div>` : ``}
           </div>
           <div class="lb-actions">
             <button class="lb-del" data-id="${id}" title="削除" aria-label="削除">
@@ -430,11 +453,20 @@
   function tick(){
     if(!running) return;
     const now = performance.now();
+    const elapsed = elapsedBase + (now-startTime);
+    if(timeLimitMs > 0 && elapsed >= timeLimitMs){
+      timeUp();
+      return;
+    }
     if(timerEl && now - lastTimerPaint >= 33){
-      timerEl.textContent = formatTime(elapsedBase + (now-startTime));
+      if(timeLimitMs > 0){
+        const remain = Math.max(0, timeLimitMs - elapsed);
+        timerEl.textContent = formatTime(remain);
+      }else{
+        timerEl.textContent = formatTime(elapsed);
+      }
       lastTimerPaint = now;
     }
-    const cur = currentElapsed();
     rafId = requestAnimationFrame(tick);
   }
   function startTimer(){
@@ -451,7 +483,7 @@
   function updatePauseUi(){
     const canPause = (elapsedBase > 0 || running) && remainingCount() > 0;
     if(pauseBtn){
-      pauseBtn.disabled = !canPause;
+      pauseBtn.disabled = !canPause || gameOver;
       pauseBtn.classList.toggle('is-paused', paused);
       if(pauseLabel) pauseLabel.textContent = paused ? '再開' : 'ポーズ';
     }
@@ -481,6 +513,7 @@
   }
 
   function hit(num){
+    if(gameOver) return;
     if(paused) return;
     const cell = cells[num];
     if(!cell || cell.classList.contains('hit')) return;
@@ -508,16 +541,21 @@
   }
 
   function finishGame(){
+    gameOver = true;
     // capture elapsed BEFORE stopping (stopTimer flips running=false)
     const elapsed = currentElapsed();
     stopTimer();
     elapsedBase = elapsed;
     paused = false;
-    if(timerEl) timerEl.textContent = formatTime(elapsedBase);
+    if(timerEl){
+      timerEl.textContent = timeLimitMs > 0 ? formatTime(Math.max(0, timeLimitMs - elapsedBase)) : formatTime(elapsedBase);
+    }
     playClearSound();
     document.body.classList.add('celebrate');
     setTimeout(()=>document.body.classList.remove('celebrate'), 900);
     spawnConfetti(140);
+    if(clearTitleEl) clearTitleEl.textContent = 'CLEAR!';
+    if(saveRowEl) saveRowEl.style.display = 'flex';
     const best = parseFloat(localStorage.getItem(BEST_KEY)||'Infinity');
     let noteText = '';
     if(elapsed < best){
@@ -526,7 +564,11 @@
     }else{
       noteText = 'ベストタイム: ' + formatTime(best) + ' 秒';
     }
-    if(clearTimeEl) clearTimeEl.textContent = 'タイム: ' + formatTime(elapsed) + ' 秒';
+    if(clearTimeEl){
+      const t = timeLimitMs > 0 ? (limitLabel(timeLimitMs) + ' / 残り: ' + formatTime(Math.max(0, timeLimitMs - elapsed)) + ' 秒') : ('タイム: ' + formatTime(elapsed) + ' 秒');
+      clearTimeEl.textContent = t;
+    }
+    if(clearCountEl) clearCountEl.textContent = '抜いた数: 9 / 9';
     if(bestNoteEl) bestNoteEl.textContent = noteText;
     setTimeout(()=> clearOverlay && clearOverlay.classList.add('show'), 300);
 
@@ -550,13 +592,16 @@
   function resetGame(keepLayout){
     stopTimer();
     paused = false;
+    gameOver = false;
     elapsedBase = 0;
     hitOrder = [];
-    if(timerEl) timerEl.textContent = '00.00';
+    if(timerEl) timerEl.textContent = timeLimitMs > 0 ? formatTime(timeLimitMs) : '00.00';
     hasSavedThisClear = false;
     savingScore = false;
     if(saveIndicatorEl) saveIndicatorEl.style.display = 'none';
     setSaveButtonState('idle');
+    if(saveRowEl) saveRowEl.style.display = 'flex';
+    if(clearTitleEl) clearTitleEl.textContent = 'CLEAR!';
     if(nicknameEl) nicknameEl.disabled = false;
     if(clearOverlay) clearOverlay.classList.remove('show');
     if(pauseOverlay) pauseOverlay.classList.remove('show');
@@ -565,6 +610,27 @@
     if(!keepLayout) layout = shuffle([1,2,3,4,5,6,7,8,9]);
     buildBoard();
     updateRemaining();
+    updatePauseUi();
+  }
+
+  function timeUp(){
+    if(gameOver) return;
+    gameOver = true;
+    // freeze at limit
+    const elapsed = Math.min(timeLimitMs || currentElapsed(), currentElapsed());
+    stopTimer();
+    elapsedBase = elapsed;
+    paused = false;
+    if(timerEl) timerEl.textContent = '00.00';
+    if(clearTitleEl) clearTitleEl.textContent = 'TIME UP!';
+    if(clearTimeEl) clearTimeEl.textContent = '制限時間: ' + limitLabel(timeLimitMs) + '（終了）';
+    const cleared = hitOrder.length;
+    if(clearCountEl) clearCountEl.textContent = '抜いた数: ' + String(cleared) + ' / 9';
+    if(bestNoteEl) bestNoteEl.textContent = 'おつかれさま〜！';
+    if(saveRowEl) saveRowEl.style.display = 'flex';
+    setSaveButtonState('idle');
+    if(nicknameEl) nicknameEl.disabled = false;
+    setTimeout(()=> clearOverlay && clearOverlay.classList.add('show'), 200);
     updatePauseUi();
   }
 
@@ -665,6 +731,32 @@
     setAltLayout(false);
   }
 
+  function applyTimeLimit(ms){
+    timeLimitMs = Math.max(0, Number(ms) || 0);
+    try{ localStorage.setItem(LIMIT_KEY, String(timeLimitMs)); }catch(e){}
+    if(timeLimitEl) timeLimitEl.value = String(timeLimitMs);
+    // apply immediately to the next run; if game already started, reset to avoid weird mid-run cutoff
+    if(running || elapsedBase > 0 || hitOrder.length > 0){
+      resetGame(true);
+    }else{
+      if(timerEl) timerEl.textContent = timeLimitMs > 0 ? formatTime(timeLimitMs) : '00.00';
+    }
+    fitBoardToViewport();
+  }
+
+  if(timeLimitEl){
+    timeLimitEl.addEventListener('change', ()=>{
+      applyTimeLimit(timeLimitEl.value);
+    });
+  }
+  try{
+    const saved = parseInt(localStorage.getItem(LIMIT_KEY) || '0', 10);
+    if(saved === 30000 || saved === 45000 || saved === 60000) applyTimeLimit(saved);
+    else applyTimeLimit(0);
+  }catch(e){
+    applyTimeLimit(0);
+  }
+
   buildBoard();
   fitBoardToViewport();
   updateRemaining();
@@ -681,8 +773,10 @@
   document.addEventListener('fullscreenchange', scheduleFit);
 
   function submitScore(){
-    if(remainingCount() !== 0) return;
+    if(!gameOver) return;
     if(savingScore || hasSavedThisClear) return;
+    const hits = hitOrder.length;
+    if(hits <= 0) return;
     savingScore = true;
     if(saveIndicatorEl) saveIndicatorEl.style.display = 'inline';
     setSaveButtonState('saving');
@@ -691,11 +785,12 @@
     const name = (nicknameEl && nicknameEl.value ? nicknameEl.value : '').trim().slice(0, 12) || 'NO NAME';
     const timeMs = Number(elapsedBase || 0);
     const score = calcScore(timeMs);
-    const row = { id: String(Date.now()) + '-' + Math.random().toString(16).slice(2), name, timeMs, score, at: Date.now() };
+    const result = (hits >= 9) ? 'clear' : 'timeup';
+    const row = { id: String(Date.now()) + '-' + Math.random().toString(16).slice(2), name, timeMs, score, hits, limitMs: timeLimitMs, result, at: Date.now() };
     const list = loadLeaderboard();
     list.push(row);
-    // ranking is time-based (lower is better)
-    list.sort((a,b)=> (a.timeMs - b.timeMs) || (b.score - a.score) || (a.at - b.at));
+    // ranking: more hits is better, then faster is better
+    list.sort((a,b)=> (Number(b.hits||0) - Number(a.hits||0)) || (Number(a.timeMs||0) - Number(b.timeMs||0)) || (a.at - b.at));
     saveLeaderboard(list);
     renderLeaderboard();
     try{ localStorage.setItem(NICK_KEY, name); }catch(e){}

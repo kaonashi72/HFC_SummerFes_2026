@@ -305,6 +305,40 @@
     opacity:0.55;
   }
 
+  .limit{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    padding:8px 12px;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,0.15);
+    background:linear-gradient(#232d45,#131a2c);
+    box-shadow:0 10px 22px rgba(0,0,0,0.35);
+    user-select:none;
+    -webkit-user-select:none;
+  }
+  .limit .limit-label{
+    font-size:13px;
+    font-weight:700;
+    color:#e8ecf6;
+    letter-spacing:0.4px;
+    white-space:nowrap;
+  }
+  .limit select{
+    background:rgba(0,0,0,0.20);
+    color:#e8ecf6;
+    border:1px solid rgba(255,255,255,0.18);
+    border-radius:10px;
+    padding:8px 10px;
+    font-family:inherit;
+    font-weight:800;
+    outline:none;
+  }
+  .limit select:focus-visible{
+    outline:2px solid rgba(255,210,63,0.55);
+    outline-offset:2px;
+  }
+
   /* --- Board --- */
   #board-wrap{
     position:relative;
@@ -903,6 +937,15 @@
         <button id="reset-btn"><span class="btn-row"><svg class="icon"><use href="#i-reset"></use></svg><span>リセット</span></span></button>
       </div>
       <div class="controls-group audio" aria-label="音量">
+        <div class="limit" id="time-limit-wrap" title="制限時間">
+          <span class="limit-label">制限</span>
+          <select id="time-limit" aria-label="制限時間">
+            <option value="0">なし</option>
+            <option value="30000">30s</option>
+            <option value="45000">45s</option>
+            <option value="60000">1m</option>
+          </select>
+        </div>
         <label class="switch" title="BGM切替">
           <input id="bgm-toggle" type="checkbox" aria-label="BGM切替">
           <span class="track" aria-hidden="true"><span class="thumb"></span></span>
@@ -941,8 +984,9 @@
 <div id="clear-overlay">
   <div id="clear-title">CLEAR!</div>
   <div id="clear-time"></div>
+  <div id="clear-count"></div>
   <div id="best-note"></div>
-  <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; align-items:center;">
+  <div id="save-row" style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; align-items:center;">
     <input id="nickname" type="text" inputmode="text" maxlength="12" placeholder="ニックネーム" aria-label="ニックネーム"
       style="padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.18); background:rgba(0,0,0,0.25); color:#fff; font-weight:700; min-width:220px;">
     <button id="save-score"><span class="btn-row"><span>保存</span></span></button>
