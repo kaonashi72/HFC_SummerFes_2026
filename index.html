@@ -461,7 +461,16 @@
   .lb-rank.gold{ color:#ffd23f; text-shadow:0 0 14px rgba(255,210,63,0.22); opacity:1; }
   .lb-rank.silver{ color:#d7e0ff; text-shadow:0 0 14px rgba(207,224,255,0.16); opacity:1; }
   .lb-rank.bronze{ color:#d79a6a; text-shadow:0 0 14px rgba(215,154,106,0.16); opacity:1; }
-  .lb-name{ font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px; }
+  .lb-name{
+    font-weight:800;
+    color:#fff;
+    white-space:normal;
+    overflow:visible;
+    text-overflow:clip;
+    max-width:none;
+    word-break:break-all;
+    line-height:1.2;
+  }
   .lb-meta{ color:#8ea0c8; font-size:12px; }
   .lb-right{ text-align:right; font-variant-numeric:tabular-nums; margin-left:auto; }
   .lb-time{ color:#cfe0ff; font-weight:800; }
@@ -932,7 +941,6 @@
       <div class="controls-group game" aria-label="ゲーム操作">
         <button id="start-btn" class="primary"><span class="btn-row"><svg class="icon"><use href="#i-play"></use></svg><span>スタート</span></span></button>
         <button id="pause-btn"><span class="btn-row"><svg class="icon icon-pause"><use href="#i-pause"></use></svg><svg class="icon icon-play"><use href="#i-play"></use></svg><span id="pause-label">ポーズ</span></span></button>
-        <button id="shuffle-btn"><span class="btn-row"><svg class="icon"><use href="#i-shuffle"></use></svg><span>シャッフル</span></span></button>
         <button id="undo-btn"><span class="btn-row"><svg class="icon"><use href="#i-undo"></use></svg><span>取り消し</span></span></button>
         <button id="reset-btn"><span class="btn-row"><svg class="icon"><use href="#i-reset"></use></svg><span>リセット</span></span></button>
       </div>

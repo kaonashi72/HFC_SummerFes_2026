@@ -11,7 +11,6 @@
   const timerEl = document.getElementById('timer');
   const remainingEl = document.getElementById('remaining');
   const startBtn = document.getElementById('start-btn');
-  const shuffleBtn = document.getElementById('shuffle-btn');
   const undoBtn = document.getElementById('undo-btn');
   const resetBtn = document.getElementById('reset-btn');
   const clearOverlay = document.getElementById('clear-overlay');
@@ -580,15 +579,6 @@
     }catch(e){}
   }
 
-  function shuffle(arr){
-    const a = arr.slice();
-    for(let i=a.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      [a[i],a[j]] = [a[j],a[i]];
-    }
-    return a;
-  }
-
   function resetGame(keepLayout){
     stopTimer();
     paused = false;
@@ -607,7 +597,8 @@
     if(pauseOverlay) pauseOverlay.classList.remove('show');
     clearConfetti();
     document.body.classList.remove('celebrate');
-    if(!keepLayout) layout = shuffle([1,2,3,4,5,6,7,8,9]);
+    // board numbers are always fixed (no shuffle)
+    layout = [1,2,3,4,5,6,7,8,9];
     buildBoard();
     updateRemaining();
     updatePauseUi();
@@ -640,7 +631,6 @@
     startTimer();
     updatePauseUi();
   });
-  if(shuffleBtn) shuffleBtn.addEventListener('click', ()=> resetGame(false));
   if(undoBtn) undoBtn.addEventListener('click', undo);
   if(resetBtn) resetBtn.addEventListener('click', ()=> resetGame(true));
   if(clearRestartBtn) clearRestartBtn.addEventListener('click', ()=>{
@@ -650,7 +640,7 @@
       const ok = window.confirm('記録をまだ保存してないよ〜。\n保存せずにもう一度遊ぶ？');
       if(!ok) return;
     }
-    resetGame(false);
+    resetGame(true);
     // back to home state (timer should NOT auto-start)
   });
 
