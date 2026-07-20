@@ -33,6 +33,7 @@
   const timeLimitEl = document.getElementById('time-limit');
   const leaderboardEl = document.getElementById('leaderboard');
   const lbScrollEl = document.getElementById('lb-scroll');
+  const lbThumbEl = document.getElementById('lb-thumb');
   const nicknameEl = document.getElementById('nickname');
   const saveScoreBtn = document.getElementById('save-score');
   const saveIndicatorEl = document.getElementById('save-indicator');
@@ -408,10 +409,7 @@
     if(list.length === 0){
       leaderboardEl.innerHTML = `<div class="lb-empty">まだ記録なしだよ〜</div>`;
       if(lbScrollEl){
-        lbScrollEl.disabled = true;
-        lbScrollEl.max = '0';
-        lbScrollEl.value = '0';
-        lbScrollEl.style.visibility = 'hidden';
+        lbScrollEl.classList.add('hidden');
       }
       return;
     }
@@ -468,13 +466,20 @@
   }
 
   function syncLbSlider(){
-    if(!leaderboardEl || !lbScrollEl) return;
-    const max = Math.max(0, Math.round(leaderboardEl.scrollHeight - leaderboardEl.clientHeight));
-    lbScrollEl.max = String(max);
-    lbScrollEl.value = String(Math.min(max, Math.round(leaderboardEl.scrollTop)));
+    if(!leaderboardEl || !lbScrollEl || !lbThumbEl) return;
+    const scrollH = leaderboardEl.scrollHeight;
+    const clientH = leaderboardEl.clientHeight;
+    const max = Math.max(0, scrollH - clientH);
     const needs = max > 0;
-    lbScrollEl.disabled = !needs;
-    lbScrollEl.style.visibility = needs ? 'visible' : 'hidden';
+    lbScrollEl.classList.toggle('hidden', !needs);
+    if(!needs) return;
+
+    const trackH = lbScrollEl.clientHeight;
+    const thumbH = Math.max(24, Math.round(trackH * (clientH / scrollH)));
+    const thumbMaxY = Math.max(0, trackH - thumbH);
+    const y = thumbMaxY ? Math.round((leaderboardEl.scrollTop / max) * thumbMaxY) : 0;
+    lbThumbEl.style.height = thumbH + 'px';
+    lbThumbEl.style.transform = `translate3d(0, ${y}px, 0)`;
   }
   let lastTimerPaint = 0;
   function currentElapsed(){
@@ -788,6 +793,11 @@
   renderLeaderboard();
   syncLbSlider();
 
+  window.addEventListener('load', ()=>{
+    // layout settle after first paint
+    setTimeout(syncLbSlider, 0);
+  }, { once:true });
+
   let __fitTimer = null;
   function scheduleFit(){
     if(__fitTimer) clearTimeout(__fitTimer);
@@ -801,16 +811,58 @@
   document.addEventListener('fullscreenchange', scheduleFit);
   if(leaderboardEl){
     leaderboardEl.addEventListener('scroll', ()=>{
-      if(!lbScrollEl) return;
-      const max = Math.max(0, Math.round(leaderboardEl.scrollHeight - leaderboardEl.clientHeight));
-      lbScrollEl.max = String(max);
-      lbScrollEl.value = String(Math.min(max, Math.round(leaderboardEl.scrollTop)));
+      syncLbSlider();
     }, { passive:true });
   }
-  if(lbScrollEl){
-    lbScrollEl.addEventListener('input', ()=>{
-      if(!leaderboardEl) return;
-      leaderboardEl.scrollTop = Number(lbScrollEl.value || 0);
+  if(lbScrollEl && lbThumbEl && leaderboardEl){
+    let dragging = false;
+    let dragStartY = 0;
+    let dragStartTop = 0;
+
+    const trackMetrics = ()=>{
+      const scrollH = leaderboardEl.scrollHeight;
+      const clientH = leaderboardEl.clientHeight;
+      const max = Math.max(0, scrollH - clientH);
+      const trackH = lbScrollEl.clientHeight;
+      const thumbH = Math.max(24, Math.round(trackH * (clientH / scrollH)));
+      const thumbMaxY = Math.max(0, trackH - thumbH);
+      return { max, trackH, thumbH, thumbMaxY };
+    };
+
+    lbThumbEl.addEventListener('pointerdown', (e)=>{
+      const { max, thumbMaxY } = trackMetrics();
+      if(max <= 0 || thumbMaxY <= 0) return;
+      dragging = true;
+      dragStartY = e.clientY;
+      dragStartTop = leaderboardEl.scrollTop;
+      try{ lbThumbEl.setPointerCapture(e.pointerId); }catch(err){}
+      e.preventDefault();
+    });
+    lbThumbEl.addEventListener('pointermove', (e)=>{
+      if(!dragging) return;
+      const { max, thumbMaxY } = trackMetrics();
+      if(max <= 0 || thumbMaxY <= 0) return;
+      const dy = e.clientY - dragStartY;
+      const ratio = dy / thumbMaxY;
+      leaderboardEl.scrollTop = Math.max(0, Math.min(max, dragStartTop + ratio * max));
+      e.preventDefault();
+    });
+    const endDrag = ()=>{
+      dragging = false;
+    };
+    lbThumbEl.addEventListener('pointerup', endDrag);
+    lbThumbEl.addEventListener('pointercancel', endDrag);
+
+    lbScrollEl.addEventListener('pointerdown', (e)=>{
+      if(e.target === lbThumbEl) return;
+      const rect = lbScrollEl.getBoundingClientRect();
+      const { max, thumbH, thumbMaxY } = trackMetrics();
+      if(max <= 0) return;
+      const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+      const thumbTargetY = Math.max(0, Math.min(thumbMaxY, y - thumbH/2));
+      const top = (thumbMaxY ? (thumbTargetY / thumbMaxY) : 0) * max;
+      leaderboardEl.scrollTop = Math.max(0, Math.min(max, top));
+      e.preventDefault();
     });
   }
 

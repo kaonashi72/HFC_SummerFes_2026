@@ -441,28 +441,44 @@
     gap:10px;
     min-height:0;
     flex:1 1 auto;
+    height:100%;
+    align-self:stretch;
   }
   .lb-wrap .lb{
     padding-right:0;
+    height:100%;
+    min-height:0;
   }
+  /* custom scrollbar (always draggable) */
   .lb-scroll{
     width:16px;
     height:100%;
     align-self:stretch;
     justify-self:stretch;
-    background:transparent;
-    accent-color: var(--accent2);
-    opacity:0.85;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,0.12);
+    background:linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03);
+    position:relative;
+    opacity:0.9;
+    user-select:none;
+    -webkit-user-select:none;
+    touch-action:none;
   }
-  .lb-scroll[disabled]{
-    opacity:0.25;
+  .lb-scroll.hidden{ display:none; }
+  .lb-thumb{
+    position:absolute;
+    left:2px;
+    right:2px;
+    top:0;
+    height:40px;
+    border-radius:999px;
+    background:linear-gradient(180deg, rgba(255,210,63,0.85), rgba(255,59,59,0.40));
+    box-shadow:0 12px 20px rgba(0,0,0,0.35);
+    cursor:grab;
+    touch-action:none;
   }
-  /* vertical range */
-  .lb-scroll{
-    writing-mode:bt-lr;
-    -webkit-appearance: slider-vertical;
-    appearance: auto;
-  }
+  .lb-thumb:active{ cursor:grabbing; }
   .lb-row{
     display:flex;
     align-items:center;
@@ -897,7 +913,7 @@
     position:fixed;
     right:calc(14px + env(safe-area-inset-right));
     bottom:calc(14px + env(safe-area-inset-bottom));
-    height:clamp(20px, 4.2vmin, 40px);
+    height:clamp(36px, 7vmin, 78px);
     width:auto;
     object-fit:contain;
     opacity:0.85;
@@ -1026,7 +1042,9 @@
         <div class="panel-title">RANKING</div>
         <div class="lb-wrap">
           <div class="lb" id="leaderboard"></div>
-          <input id="lb-scroll" class="lb-scroll" type="range" min="0" max="0" value="0" step="1" aria-label="ランキングスクロール" disabled>
+          <div id="lb-scroll" class="lb-scroll" aria-hidden="true">
+            <div id="lb-thumb" class="lb-thumb"></div>
+          </div>
         </div>
       </div>
     </aside>
