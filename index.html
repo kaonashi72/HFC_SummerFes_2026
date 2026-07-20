@@ -864,6 +864,20 @@
     font-size:clamp(64px, 12vmin, 120px);
   }
 
+  /* bottom-right logo */
+  #corner-logo{
+    position:fixed;
+    right:calc(14px + env(safe-area-inset-right));
+    bottom:calc(14px + env(safe-area-inset-bottom));
+    height:clamp(20px, 4.2vmin, 40px);
+    width:auto;
+    object-fit:contain;
+    opacity:0.85;
+    z-index:35;
+    pointer-events:none;
+    filter:drop-shadow(0 10px 22px rgba(0,0,0,0.45));
+  }
+
   @media (max-width: 980px){
     body.layout-alt #main{
       grid-template-columns:1fr;
@@ -911,6 +925,7 @@
 </head>
 <body>
 
+<img id="corner-logo" src="./hfcchurch.jpg" alt="HFCロゴ">
 <button id="layout-btn" title="レイアウト切替"><span class="btn-row"><span>レイアウト切替</span></span></button>
 <button id="fullscreen-btn" title="フルスクリーン切替"><span class="btn-row"><svg class="icon"><use href="#i-fullscreen"></use></svg><span>投影用フルスクリーン</span></span></button>
 
